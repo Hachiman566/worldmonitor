@@ -99,25 +99,6 @@ export class PredictionPanel extends Panel {
         // ignore translation errors
       }
     }
-        const batch = untranslated.slice(i, i + BATCH_SIZE);
-        const titles = batch.map((p) => p.title).join('\n');
-        try {
-          const result = await translateText(titles, lang);
-          if (result) {
-            const lines = result.split('\n');
-            for (let j = 0; j < batch.length && j < lines.length; j++) {
-              const translated = lines[j]?.trim();
-              const item = batch[j];
-              if (translated && item) {
-                this.translationCache.set(item.title, translated);
-              }
-            }
-          }
-        } catch {
-          continue;
-        }
-      }
-    }
 
     const container = this.content;
 
