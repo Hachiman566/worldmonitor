@@ -474,61 +474,6 @@ export const INDICATOR_PRESETS = {
   ],
 } as const;
 
-export interface TechReadinessScore {
-  country: string;
-  countryName: string;
-  score: number;
-  rank: number;
-  components: {
-    internet: number | null;
-    mobile: number | null;
-    broadband: number | null;
-    rdSpend: number | null;
-  };
-}
-
-export async function getTechReadinessRankings(
-  countries?: string[],
-): Promise<TechReadinessScore[]> {
-  // Fast path: bootstrap-hydrated data available on first page load
-  const hydrated = getHydratedData('techReadiness') as TechReadinessScore[] | undefined;
-  if (hydrated?.length && !countries) return hydrated;
-
-  // Fallback: fetch the pre-computed seed key directly from bootstrap endpoint.
-  // Data is seeded by seed-wb-indicators.mjs — never call WB API from frontend.
-  try {
-    const resp = await fetch('/api/bootstrap?keys=techReadiness', {
-      signal: AbortSignal.timeout(5_000),
-    });
-    if (resp.ok) {
-      const { data } = (await resp.json()) as { data: { techReadiness?: TechReadinessScore[] } };
-      if (data.techReadiness?.length) {
-        const scores = countries
-          ? data.techReadiness.filter(s => countries.includes(s.country))
-          : data.techReadiness;
-        return scores;
-      }
-    }
-  } catch { /* fall through */ }
-
-  return [];
-}
-
-export async function getCountryComparison(
-  indicator: string,
-  _countryCodes: string[],
-): Promise<WorldBankResponse> {
-  // All WB data is now pre-seeded by seed-wb-indicators.mjs.
-  // This function is unused but kept for API compat.
-  return {
-    indicator,
-    indicatorName: TECH_INDICATORS[indicator] || indicator,
-    metadata: { page: 0, pages: 0, total: 0 },
-    byCountry: {},
-    latestByCountry: {},
-    timeSeries: [],
-  };
-}
 
 // ========================================================================
 // BIS -- Central bank policy data

@@ -4,7 +4,6 @@ import { generateSummary, type SummarizeOptions } from '@/services/summarization
 import { parallelAnalysis, type AnalyzedHeadline } from '@/services/parallel-analysis';
 import { signalAggregator, type RegionalConvergence } from '@/services/signal-aggregator';
 import { focalPointDetector } from '@/services/focal-point-detector';
-import { stripOrefLabels } from '@/services/oref-alerts';
 import { ingestNewsForCII } from '@/services/country-instability';
 import { getTheaterPostureSummaries } from '@/services/military-surge';
 import { isMobileDevice } from '@/utils';
@@ -17,6 +16,12 @@ import { getAiFlowSettings, isAnyAiProviderEnabled, subscribeAiFlowChange } from
 import { getServerInsights, type ServerInsights, type ServerInsightStory } from '@/services/insights-loader';
 import type { ClusteredEvent, FocalPoint, MilitaryFlight } from '@/types';
 
+
+// OREF label stripping utility (formerly from oref-alerts)
+const OREF_LABEL_RE = /(?:ALERT|AREAS|DESC)[[^]]*]:s*/g;
+function stripOrefLabels(text: string): string {
+  return text.replace(OREF_LABEL_RE, '').trim();
+}
 export class InsightsPanel extends Panel {
   private lastBriefUpdate = 0;
   private cachedBrief: string | null = null;

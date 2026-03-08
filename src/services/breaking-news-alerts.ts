@@ -1,5 +1,4 @@
 import type { NewsItem } from '@/types';
-import type { OrefAlert } from '@/services/oref-alerts';
 import { getSourceTier } from '@/config/feeds';
 
 export interface BreakingAlert {
@@ -25,7 +24,6 @@ const RECENCY_GATE_MS = 15 * 60 * 1000;
 const PER_EVENT_COOLDOWN_MS = 30 * 60 * 1000;
 const GLOBAL_COOLDOWN_MS = 60 * 1000;
 // Suppress RSS-based alerts during initial feed fetch after app load.
-// OREF siren alerts bypass this — real-time sirens must never be delayed.
 const STARTUP_GRACE_MS = 10 * 1000;
 
 const DEFAULT_SETTINGS: AlertSettings = {
@@ -204,32 +202,9 @@ export function checkBatchForBreakingAlerts(items: NewsItem[]): void {
   if (best && !isGlobalCooldown(best.threatLevel)) dispatchAlert(best);
 }
 
-export function dispatchOrefBreakingAlert(alerts: OrefAlert[]): void {
-  const settings = getAlertSettings();
-  if (!settings.enabled || !alerts.length) return;
-
-  const title = alerts[0]?.title || 'Siren alert';
-  const allLocations = alerts.flatMap(a => a.data);
-  const shown = allLocations.slice(0, 3);
-  const overflow = allLocations.length - shown.length;
-  const locationSuffix = shown.length
-    ? ' — ' + shown.join(', ') + (overflow > 0 ? ` +${overflow} areas` : '')
-    : '';
-  const headline = title + locationSuffix;
-
-  const keyParts = alerts.map(a => a.id || `${a.cat}|${a.title}|${a.alertDate}`).sort();
-  const dedupeKey = 'oref:' + simpleHash(keyParts.join(','));
-
-  if (isDuplicate(dedupeKey)) return;
-
-  dispatchAlert({
-    id: dedupeKey,
-    headline,
-    source: 'OREF Pikud HaOref',
-    threatLevel: 'critical',
-    timestamp: new Date(),
-    origin: 'oref_siren',
-  });
+export function dispatchOrefBreakingAlert(_alerts: never[]): void {
+  // OREF alerts disabled - function stubbed
+  return;
 }
 
 export function initBreakingNewsAlerts(): void {

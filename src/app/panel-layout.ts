@@ -704,9 +704,6 @@ export class PanelLayoutManager implements AppModule {
         }),
       );
 
-      this.lazyPanel('oref-sirens', () =>
-        import('@/components/OrefSirensPanel').then(m => new m.OrefSirensPanel()),
-      );
 
       // this.lazyPanel('telegram-intel', () =>
       //   import('@/components/TelegramIntelPanel').then(m => new m.TelegramIntelPanel()),
@@ -749,9 +746,6 @@ export class PanelLayoutManager implements AppModule {
       const serviceStatusPanel = new ServiceStatusPanel();
       this.ctx.panels['service-status'] = serviceStatusPanel;
 
-      this.lazyPanel('tech-readiness', () =>
-        import('@/components/TechReadinessPanel').then(m => new m.TechReadinessPanel()),
-      );
 
       this.ctx.panels['macro-signals'] = new MacroSignalsPanel();
       this.ctx.panels['etf-flows'] = new ETFFlowsPanel();
@@ -765,11 +759,6 @@ export class PanelLayoutManager implements AppModule {
 
     const insightsPanel = new InsightsPanel();
     this.ctx.panels['insights'] = insightsPanel;
-
-    // Global Giving panel (all variants)
-    this.lazyPanel('giving', () =>
-      import('@/components/GivingPanel').then(m => new m.GivingPanel()),
-    );
 
     // Happy variant panels (lazy-loaded — only relevant for happy variant)
     if (SITE_VARIANT === 'happy') {

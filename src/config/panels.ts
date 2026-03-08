@@ -200,7 +200,6 @@ const TECH_PANELS: Record<string, PanelConfig> = {
   events: { name: 'Tech Events', enabled: true, priority: 1 },
   'service-status': { name: 'Service Status', enabled: true, priority: 2 },
   economic: { name: 'Economic Indicators', enabled: true, priority: 2 },
-  'tech-readiness': { name: 'Tech Readiness Index', enabled: true, priority: 1 },
   'macro-signals': { name: 'Market Radar', enabled: true, priority: 2 },
   'etf-flows': { name: 'BTC ETF Tracker', enabled: true, priority: 2 },
   stablecoins: { name: 'Stablecoins', enabled: true, priority: 2 },
@@ -474,7 +473,6 @@ const HAPPY_PANELS: Record<string, PanelConfig> = {
   digest: { name: '5 Good Things', enabled: true, priority: 1 },
   species: { name: 'Conservation Wins', enabled: true, priority: 1 },
   renewable: { name: 'Renewable Energy', enabled: true, priority: 1 },
-  giving: { name: 'Global Giving', enabled: true, priority: 1 },
 };
 
 const HAPPY_MAP_LAYERS: MapLayers = {
@@ -641,14 +639,14 @@ export const PANEL_CATEGORY_MAP: Record<string, { labelKey: string; panelKeys: s
   },
   dataTracking: {
     labelKey: 'header.panelCatDataTracking',
-    panelKeys: ['monitors', 'satellite-fires', 'ucdp-events', 'security-advisories', 'oref-sirens', 'world-clock'],
+    panelKeys: ['monitors', 'satellite-fires', 'ucdp-events', 'security-advisories', 'world-clock'],
     variants: ['full'],
   },
 
   // Tech variant
   techAi: {
     labelKey: 'header.panelCatTechAi',
-    panelKeys: ['ai', 'tech', 'hardware', 'cloud', 'dev', 'github', 'producthunt', 'events', 'service-status', 'tech-readiness'],
+    panelKeys: ['ai', 'tech', 'hardware', 'cloud', 'dev', 'github', 'producthunt', 'events', 'service-status'],
     variants: ['tech'],
   },
   startupsVc: {

@@ -60,7 +60,7 @@ import {
   fetchCriticalMinerals,
 } from '@/services';
 import { getMarketWatchlistEntries } from '@/services/market-watchlist';
-import { checkBatchForBreakingAlerts, dispatchOrefBreakingAlert } from '@/services/breaking-news-alerts';
+import { checkBatchForBreakingAlerts } from '@/services/breaking-news-alerts';
 import { mlWorker } from '@/services/ml-worker';
 import { clusterNewsHybrid } from '@/services/clustering';
 import { ingestProtests, ingestFlights, ingestVessels, ingestEarthquakes, detectGeoConvergence, geoConvergenceToSignal } from '@/services/geo-convergence';
@@ -69,7 +69,7 @@ import { updateAndCheck, consumeServerAnomalies, fetchLiveAnomalies } from '@/se
 import { fetchAllFires, flattenFires, computeRegionStats, toMapFires } from '@/services/wildfires';
 import { analyzeFlightsForSurge, surgeAlertToSignal, detectForeignMilitaryPresence, foreignPresenceToSignal, type TheaterPostureSummary } from '@/services/military-surge';
 import { fetchCachedTheaterPosture } from '@/services/cached-theater-posture';
-import { ingestProtestsForCII, ingestMilitaryForCII, ingestNewsForCII, ingestOutagesForCII, ingestConflictsForCII, ingestUcdpForCII, ingestHapiForCII, ingestDisplacementForCII, ingestClimateForCII, ingestStrikesForCII, ingestOrefForCII, ingestAviationForCII, ingestAdvisoriesForCII, ingestGpsJammingForCII, ingestAisDisruptionsForCII, ingestSatelliteFiresForCII, ingestCyberThreatsForCII, ingestTemporalAnomaliesForCII, isInLearningMode, resetHotspotActivity, setIntelligenceSignalsLoaded, hasAnyIntelligenceData, calculateCII } from '@/services/country-instability';
+import { ingestProtestsForCII, ingestMilitaryForCII, ingestNewsForCII, ingestOutagesForCII, ingestConflictsForCII, ingestUcdpForCII, ingestHapiForCII, ingestDisplacementForCII, ingestClimateForCII, ingestStrikesForCII, ingestAviationForCII, ingestAdvisoriesForCII, ingestGpsJammingForCII, ingestAisDisruptionsForCII, ingestSatelliteFiresForCII, ingestCyberThreatsForCII, ingestTemporalAnomaliesForCII, isInLearningMode, resetHotspotActivity, setIntelligenceSignalsLoaded, hasAnyIntelligenceData, calculateCII } from '@/services/country-instability';
 import { fetchGpsInterference } from '@/services/gps-interference';
 import { dataFreshness, type DataSourceId } from '@/services/data-freshness';
 import { fetchConflictEvents, fetchUcdpClassifications, fetchHapiSummary, fetchUcdpEvents, deduplicateAgainstAcled, fetchIranEvents } from '@/services/conflict';
@@ -77,7 +77,6 @@ import { fetchUnhcrPopulation } from '@/services/displacement';
 import { fetchClimateAnomalies } from '@/services/climate';
 import { fetchSecurityAdvisories } from '@/services/security-advisories';
 import { fetchTelegramFeed } from '@/services/telegram-intel';
-import { fetchOrefAlerts, startOrefPolling, stopOrefPolling, onOrefAlertsUpdate } from '@/services/oref-alerts';
 import { enrichEventsWithExposure } from '@/services/population-exposure';
 import { debounce, getCircuitBreakerCooldownInfo } from '@/utils';
 import { isFeatureAvailable, isFeatureEnabled } from '@/services/runtime-config';
@@ -103,14 +102,12 @@ import {
   CIIPanel,
   StrategicPosturePanel,
   EconomicPanel,
-  TechReadinessPanel,
   UcdpEventsPanel,
   TradePolicyPanel,
   SupplyChainPanel,
 } from '@/components';
 import { SatelliteFiresPanel } from '@/components/SatelliteFiresPanel';
 import { classifyNewsItem } from '@/services/positive-classifier';
-import { fetchGivingSummary } from '@/services/giving';
 import { fetchProgressData } from '@/services/progress-data';
 import { fetchConservationWins } from '@/services/conservation-data';
 import { fetchRenewableEnergyData, fetchEnergyCapacity } from '@/services/renewable-energy-data';
@@ -208,8 +205,6 @@ export class DataLoaderManager implements AppModule {
   }
 
   destroy(): void {
-    this.applyTimeRangeFilterToNewsPanelsDebounced.cancel();
-    stopOrefPolling();
     if (this.boundMarketWatchlistHandler) {
       window.removeEventListener('wm-market-watchlist-changed', this.boundMarketWatchlistHandler as EventListener);
       this.boundMarketWatchlistHandler = null;
@@ -355,22 +350,6 @@ export class DataLoaderManager implements AppModule {
       });
     }
 
-    if (Object.prototype.hasOwnProperty.call(DEFAULT_PANELS, 'giving')) {
-      tasks.push({
-        name: 'giving',
-        task: runGuarded('giving', async () => {
-          const givingResult = await fetchGivingSummary();
-          if (!givingResult.ok) {
-            dataFreshness.recordError('giving', 'Giving data unavailable (retaining prior state)');
-            return;
-          }
-          const data = givingResult.data;
-          this.callPanel('giving', 'setData', data);
-          if (data.platforms.length > 0) dataFreshness.recordUpdate('giving', data.platforms.length);
-        }),
-      });
-    }
-
     if (SITE_VARIANT === 'full') {
       try {
         const cached = await fetchCachedRiskScores().catch(() => null);
@@ -394,9 +373,6 @@ export class DataLoaderManager implements AppModule {
     if (SITE_VARIANT !== 'happy' && !isDesktopRuntime()) tasks.push({ name: 'iranAttacks', task: runGuarded('iranAttacks', () => this.loadIranEvents()) });
     if (SITE_VARIANT !== 'happy' && (this.ctx.mapLayers.techEvents || SITE_VARIANT === 'tech')) tasks.push({ name: 'techEvents', task: runGuarded('techEvents', () => this.loadTechEvents()) });
 
-    if (SITE_VARIANT !== 'happy') {
-      tasks.push({ name: 'techReadiness', task: runGuarded('techReadiness', () => (this.ctx.panels['tech-readiness'] as TechReadinessPanel)?.refresh()) });
-    }
 
     // Stagger startup: run tasks in small batches to avoid hammering upstreams
     const BATCH_SIZE = 4;
@@ -1436,30 +1412,6 @@ export class DataLoaderManager implements AppModule {
 
     // Telegram Intel
     tasks.push(this.loadTelegramIntel());
-
-    // OREF sirens
-    tasks.push((async () => {
-      try {
-        const data = await fetchOrefAlerts();
-        this.callPanel('oref-sirens', 'setData', data);
-        const alertCount = data.alerts?.length ?? 0;
-        const historyCount24h = data.historyCount24h ?? 0;
-        ingestOrefForCII(alertCount, historyCount24h);
-        this.ctx.intelligenceCache.orefAlerts = { alertCount, historyCount24h };
-        if (data.alerts?.length) dispatchOrefBreakingAlert(data.alerts);
-        onOrefAlertsUpdate((update) => {
-          this.callPanel('oref-sirens', 'setData', update);
-          const updAlerts = update.alerts?.length ?? 0;
-          const updHistory = update.historyCount24h ?? 0;
-          ingestOrefForCII(updAlerts, updHistory);
-          this.ctx.intelligenceCache.orefAlerts = { alertCount: updAlerts, historyCount24h: updHistory };
-          if (update.alerts?.length) dispatchOrefBreakingAlert(update.alerts);
-        });
-        startOrefPolling();
-      } catch (error) {
-        console.error('[Intelligence] OREF alerts fetch failed:', error);
-      }
-    })());
 
     // GPS/GNSS jamming (cloud-only — seeded by Wingbits API via fetch-gpsjam.mjs)
     if (!isDesktopRuntime()) {

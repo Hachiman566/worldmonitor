@@ -81,8 +81,24 @@ export class PredictionPanel extends Panel {
     const untranslated = data.filter((p) => !this.translationCache.has(p.title));
 
     if (untranslated.length > 0) {
-      const BATCH_SIZE = 5;
-      for (let i = 0; i < untranslated.length; i += BATCH_SIZE) {
+      const batch = untranslated;
+      const titles = batch.map((p) => p.title).join('\n');
+      try {
+        const result = await translateText(titles, lang);
+        if (result) {
+          const lines = result.split('\n');
+          for (let j = 0; j < batch.length && j < lines.length; j++) {
+            const translated = lines[j]?.trim();
+            const item = batch[j];
+            if (translated && item) {
+              this.translationCache.set(item.title, translated);
+            }
+          }
+        }
+      } catch {
+        // ignore translation errors
+      }
+    }
         const batch = untranslated.slice(i, i + BATCH_SIZE);
         const titles = batch.map((p) => p.title).join('\n');
         try {
