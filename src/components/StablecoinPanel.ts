@@ -52,8 +52,8 @@ export class StablecoinPanel extends Panel {
         if (!this.element?.isConnected) return;
         this.error = null;
 
-        if (this.data && this.data.stablecoins.length === 0 && attempt < 2) {
-          this.showRetrying();
+        if (this.data && !this.data.stablecoins?.length && attempt < 2) {
+          this.showRetrying(undefined, 20);
           await new Promise(r => setTimeout(r, 20_000));
           if (!this.element?.isConnected) return;
           continue;
@@ -63,12 +63,13 @@ export class StablecoinPanel extends Panel {
         if (this.isAbortError(err)) return;
         if (!this.element?.isConnected) return;
         if (attempt < 2) {
-          this.showRetrying();
+          this.showRetrying(undefined, 20);
           await new Promise(r => setTimeout(r, 20_000));
           if (!this.element?.isConnected) return;
           continue;
         }
-        this.error = err instanceof Error ? err.message : 'Failed to fetch';
+        console.warn('[Stablecoin] Fetch error:', err);
+        this.error = null;
       }
     }
     this.loading = false;
@@ -82,13 +83,13 @@ export class StablecoinPanel extends Panel {
     }
 
     if (this.error || !this.data) {
-      this.showError(this.error || t('common.noDataShort'));
+      this.showError(this.error || t('common.noDataShort'), () => void this.fetchData());
       return;
     }
 
     const d = this.data;
-    if (!d.stablecoins.length) {
-      this.setContent(`<div class="panel-loading-text">${t('components.stablecoins.unavailable')}</div>`);
+    if (!d.stablecoins?.length) {
+      this.setContent(`<div class="panel-empty">${t('common.noDataShort')}</div>`);
       return;
     }
 

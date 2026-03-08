@@ -498,6 +498,7 @@ export interface PanelConfig {
   name: string;
   enabled: boolean;
   priority?: number;
+  premium?: 'locked' | 'enhanced';
 }
 
 export interface MapLayers {
@@ -557,6 +558,10 @@ export interface MapLayers {
   ciiChoropleth: boolean;
   // Overlay layers
   dayNight: boolean;
+  // Commodity variant layers
+  miningSites: boolean;
+  processingPlants: boolean;
+  commodityPorts: boolean;
 }
 
 export interface AIDataCenter {

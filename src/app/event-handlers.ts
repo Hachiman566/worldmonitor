@@ -313,10 +313,10 @@ export class EventHandlerManager implements AppModule {
       trackMapViewChange(regionSelect.value);
     });
 
-    this.boundResizeHandler = () => {
+    this.boundResizeHandler = debounce(() => {
       this.ctx.map?.setIsResizing(false);
       this.ctx.map?.render();
-    };
+    }, 150);
     window.addEventListener('resize', this.boundResizeHandler);
 
     this.setupMapResize();
@@ -784,28 +784,15 @@ export class EventHandlerManager implements AppModule {
         localStorage.removeItem('worldmonitor-panel-col-spans');
         localStorage.removeItem(this.ctx.PANEL_ORDER_KEY);
         localStorage.removeItem(this.ctx.PANEL_ORDER_KEY + '-bottom');
+        localStorage.removeItem(this.ctx.PANEL_ORDER_KEY + '-bottom-set');
         localStorage.removeItem('map-height');
         window.location.reload();
       },
       isDesktopApp: this.ctx.isDesktopApp,
-      statusPanel: this.ctx.statusPanel,
-      isGlobeMode: () => this.ctx.map?.isGlobeMode() ?? false,
-      onMapModeChange: (useGlobe: boolean) => {
-        saveToStorage(STORAGE_KEYS.mapMode, useGlobe ? 'globe' : 'flat');
-        if (useGlobe) {
-          this.ctx.map?.switchToGlobe();
-        } else {
-          this.ctx.map?.switchToFlat();
-        }
-      },
       onMapProviderChange: () => {
         this.ctx.map?.reloadBasemap();
       },
     });
-
-    if (this.ctx.statusPanel) {
-      this.ctx.statusPanel.onUpdate = () => this.ctx.unifiedSettings?.refreshStatusTab();
-    }
 
     const mount = document.getElementById('unifiedSettingsMount');
     if (mount) {
@@ -878,7 +865,7 @@ export class EventHandlerManager implements AppModule {
       liquidity: 0,
     }));
     this.ctx.latestPredictions = predictions;
-    (this.ctx.panels['polymarket'] as PredictionPanel).renderPredictions(predictions);
+    (this.ctx.panels['polymarket'] as PredictionPanel | undefined)?.renderPredictions(predictions);
 
     this.ctx.map?.setHotspotLevels(snapshot.hotspotLevels);
   }

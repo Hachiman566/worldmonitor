@@ -11,6 +11,7 @@ import type {
 } from '../../../../src/generated/server/worldmonitor/market/v1/service_server';
 import { parseStringArray, fetchCryptoMarkets } from './_shared';
 import { cachedFetchJson, getCachedJson } from '../../../_shared/redis';
+import stablecoinConfig from '../../../../shared/stablecoins.json';
 
 const REDIS_CACHE_KEY = 'market:stablecoins:v1';
 const REDIS_CACHE_TTL = 600; // 10 min — CoinGecko rate-limited
@@ -19,7 +20,7 @@ const REDIS_CACHE_TTL = 600; // 10 min — CoinGecko rate-limited
 // Constants and cache
 // ========================================================================
 
-const DEFAULT_STABLECOIN_IDS = 'tether,usd-coin,dai,first-digital-usd,ethena-usde';
+const DEFAULT_STABLECOIN_IDS = stablecoinConfig.ids.join(',');
 
 let stablecoinCache: ListStablecoinMarketsResponse | null = null;
 let stablecoinCacheTimestamp = 0;
@@ -79,7 +80,10 @@ export async function listStablecoinMarkets(
     const coinIds = coins.split(',');
     const data = await fetchCryptoMarkets(coinIds);
 
-    if (data.length === 0 && stablecoinCache) return null;
+    if (data.length === 0 && stablecoinCache) {
+      console.warn('[stablecoin] empty response — returning stale cache');
+      return null;
+    }
 
     const stablecoins: Stablecoin[] = data.map(coin => {
       const price = coin.current_price || 0;

@@ -39,7 +39,21 @@ The flat map supports multiple tile providers, selectable at runtime via **Setti
 3. Set `VITE_PMTILES_URL=https://your-server.example/planet.pmtiles` in `.env.local`
 4. The PMTiles and Auto options will appear in Settings
 
-**Fallback behavior**: When using PMTiles or Auto mode, if tile loading fails (CORS errors, server downtime, 403s), the map automatically falls back to OpenFreeMap after detecting 2+ errors within 10 seconds. A console warning is logged when fallback activates.
+### Map Themes
+
+Each tile provider offers different visual themes, selectable via **Settings → Map Theme**. The theme selection is **per-provider** — switching providers remembers each provider's last-used theme. Map theme is fully independent of the app theme (Auto/Dark/Light); the app theme only affects UI chrome, while the map theme controls basemap appearance.
+
+| Provider | Available Themes | Default |
+|----------|-----------------|---------|
+| **PMTiles** | Black (deepest dark), Dark, Grayscale, Light, White | Black |
+| **OpenFreeMap** | Dark, Positron (light) | Dark |
+| **CARTO** | Dark Matter, Voyager (light), Positron (light) | Dark Matter |
+
+**Sprite mapping**: PMTiles themes `black`, `dark`, and `grayscale` use the `dark` Protomaps sprite sheet; `light` and `white` use the `light` sprite sheet.
+
+**Overlay paint adaptation**: Country highlight/hover paint colors automatically adapt to the selected map theme (not the app theme), using lower opacity on light themes for visibility.
+
+**Fallback behavior**: When using PMTiles or Auto mode, if tile loading fails (CORS errors, server downtime, 403s), the map automatically falls back to OpenFreeMap after detecting 2+ errors within 10 seconds. The fallback respects the current map theme's light/dark nature — a light PMTiles theme falls back to OpenFreeMap Positron, not Dark. A console warning is logged when fallback activates.
 
 **Flat Map (deck.gl + MapLibre GL JS)** — a WebGL-accelerated 2D map with smooth 60fps rendering and thousands of concurrent markers:
 
@@ -58,3 +72,7 @@ The flat map supports multiple tile providers, selectable at runtime via **Setti
 - **Mobile touch gestures** — single-finger pan with inertial velocity animation (0.92 decay factor, computed from 4-entry circular touch history), two-finger pinch-to-zoom with center-point preservation, and bottom-sheet popups with drag-to-dismiss. An 8px movement threshold prevents accidental interaction during taps
 - **Timezone-based region detection** — on first load, the map centers on the user's approximate region derived from `Intl.DateTimeFormat().resolvedOptions().timeZone` — no network dependency, no geolocation prompt. On mobile, the browser's Geolocation API is queried (5-second timeout) and the map auto-centers on the user's precise GPS coordinates at zoom level 6. If the URL already contains shared coordinates, the shared view takes precedence and geolocation is skipped
 - **Cmd+K map navigation** — the command palette supports `Map:` prefixed commands to fly to any country or region on either engine
+
+### Static Map Assets & Geocoding
+
+Country boundaries, boundary overrides, and the geocoding service are documented in [MAPS_AND_GEOCODING.md](MAPS_AND_GEOCODING.md). All large static files are served from R2 CDN via `maps.worldmonitor.app`.

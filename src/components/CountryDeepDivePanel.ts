@@ -148,6 +148,32 @@ export class CountryDeepDivePanel implements CountryBriefPanel {
     this.open();
   }
 
+  public showGeoError(onRetry: () => void): void {
+    this.currentCode = '__error__';
+    this.currentName = null;
+    this.content.replaceChildren();
+
+    const wrapper = this.el('div', 'cdp-geo-error');
+    wrapper.append(
+      this.el('div', 'cdp-geo-error-icon', '\u26A0\uFE0F'),
+      this.el('div', 'cdp-geo-error-msg', t('countryBrief.geocodeFailed')),
+    );
+
+    const actions = this.el('div', 'cdp-geo-error-actions');
+
+    const retryBtn = this.el('button', 'cdp-geo-error-retry', t('countryBrief.retryBtn')) as HTMLButtonElement;
+    retryBtn.type = 'button';
+    retryBtn.addEventListener('click', () => onRetry(), { once: true });
+
+    const closeBtn = this.el('button', 'cdp-geo-error-close', t('countryBrief.closeBtn')) as HTMLButtonElement;
+    closeBtn.type = 'button';
+    closeBtn.addEventListener('click', () => this.hide(), { once: true });
+
+    actions.append(retryBtn, closeBtn);
+    wrapper.append(actions);
+    this.content.append(wrapper);
+  }
+
   public show(country: string, code: string, score: CountryScore | null, signals: CountryBriefSignals): void {
     this.abortController.abort();
     this.abortController = new AbortController();
@@ -234,7 +260,7 @@ export class CountryDeepDivePanel implements CountryBriefPanel {
         if (sb !== sa) return sb - sa;
         return this.toTimestamp(b.pubDate) - this.toTimestamp(a.pubDate);
       })
-      .slice(0, 15);
+      .slice(0, 10);
 
     this.currentHeadlineCount = items.length;
 
@@ -506,8 +532,9 @@ export class CountryDeepDivePanel implements CountryBriefPanel {
       return;
     }
 
-    const summary = this.summarizeBrief(data.brief);
-    const text = this.el('p', 'cdp-assessment-text', summary);
+    const summaryHtml = this.formatBrief(this.summarizeBrief(data.brief), 0);
+    const text = this.el('div', 'cdp-assessment-text cdp-summary-only');
+    text.innerHTML = summaryHtml;
 
     const metaTokens: string[] = [];
     if (data.cached) metaTokens.push('Cached');
@@ -905,7 +932,12 @@ export class CountryDeepDivePanel implements CountryBriefPanel {
   }
 
   private summarizeBrief(brief: string): string {
-    const normalized = brief.replace(/\s+/g, ' ').trim();
+    const stripped = brief.replace(/\*\*(.*?)\*\*/g, '$1');
+    const lines = stripped.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
+    if (lines.length >= 3) {
+      return lines.slice(0, 3).join('\n');
+    }
+    const normalized = stripped.replace(/\s+/g, ' ').trim();
     const sentences = normalized.split(/(?<=[.!?])\s+/).filter((part) => part.length > 0);
     return sentences.slice(0, 3).join(' ') || normalized;
   }

@@ -170,7 +170,7 @@ export function getProviderCredentials(provider: string): ProviderCredentials | 
     if (!apiKey) return null;
     return {
       apiUrl: 'https://openrouter.ai/api/v1/chat/completions',
-      model: 'openrouter/free',
+      model: 'google/gemini-2.5-flash',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',

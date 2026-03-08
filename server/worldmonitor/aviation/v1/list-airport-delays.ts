@@ -17,16 +17,16 @@ import {
   toProtoSource,
   determineSeverity,
   generateSimulatedDelay,
-  fetchNotamClosures,
   buildNotamAlert,
+  loadNotamClosures,
+  mergeNotamWithExistingAlert,
 } from './_shared';
 import { CHROME_UA } from '../../../_shared/constants';
 import { cachedFetchJson, getCachedJson, setCachedJson } from '../../../_shared/redis';
 
 const FAA_CACHE_KEY = 'aviation:delays:faa:v1';
 const INTL_CACHE_KEY = 'aviation:delays:intl:v3';
-const NOTAM_CACHE_KEY = 'aviation:notam:closures:v1';
-const CACHE_TTL = 7200;      // 2h for FAA, intl (real), and NOTAM
+const CACHE_TTL = 7200;
 
 export async function listAirportDelays(
   _ctx: ServerContext,
@@ -53,7 +53,6 @@ export async function listAirportDelays(
         })
         .filter((a): a is AirportDelayAlert => a !== null);
       faaFromSeed = true;
-      console.log(`[Aviation] FAA: ${faaAlerts.length} alerts (from seed, age ${Math.round(seedAge / 60000)}m)`);
     }
   } catch {}
   // Live fallback: only reached if seed is missing/stale AND SEED_FALLBACK_FAA is set.
@@ -107,7 +106,6 @@ export async function listAirportDelays(
       }
     );
     faaAlerts = result?.alerts ?? [];
-    console.log(`[Aviation] FAA: ${faaAlerts.length} alerts`);
   } catch (err) {
     console.warn(`[Aviation] FAA fetch failed: ${err instanceof Error ? err.message : 'unknown'}`);
   }
@@ -119,47 +117,17 @@ export async function listAirportDelays(
     const cached = await getCachedJson(INTL_CACHE_KEY) as { alerts: AirportDelayAlert[] } | null;
     if (cached?.alerts) {
       intlAlerts = cached.alerts;
-      console.log(`[Aviation] Intl: ${intlAlerts.length} alerts (from cache)`);
     } else {
       const nonUs = MONITORED_AIRPORTS.filter(a => a.country !== 'USA');
       intlAlerts = nonUs.map(a => generateSimulatedDelay(a)).filter(Boolean) as AirportDelayAlert[];
-      console.log(`[Aviation] Intl: cache miss — ${intlAlerts.length} simulated alerts`);
     }
   } catch (err) {
     console.warn(`[Aviation] Intl fetch failed: ${err instanceof Error ? err.message : 'unknown'}`);
   }
 
-  // 3. NOTAM closures — seed-first with live fallback
+  // 3. NOTAM closures — shared loader (seed-first with live fallback)
   let allAlerts = [...faaAlerts, ...intlAlerts];
-  let notamResult: { closedIcaos: string[]; reasons: Record<string, string> } | null = null;
-  let notamFromSeed = false;
-  try {
-    const notamMeta = await getCachedJson('seed-meta:aviation:notam', true) as { fetchedAt?: number } | null;
-    const notamAge = notamMeta?.fetchedAt ? t0 - notamMeta.fetchedAt : Infinity;
-    const seedNotam = await getCachedJson(NOTAM_CACHE_KEY, true) as { closedIcaos: string[]; reasons: Record<string, string> } | null;
-    if (seedNotam && (notamAge < SEED_FRESHNESS_MS || !process.env.SEED_FALLBACK_NOTAM)) {
-      notamResult = seedNotam;
-      notamFromSeed = true;
-      console.log(`[Aviation] NOTAM: ${seedNotam.closedIcaos?.length || 0} closures (from seed, age ${Math.round(notamAge / 60000)}m)`);
-    }
-  } catch {}
-  // Same stampede-safe design as FAA above: no live fetch unless SEED_FALLBACK_NOTAM is set.
-  if (!notamFromSeed && process.env.ICAO_API_KEY) {
-    try {
-      notamResult = await cachedFetchJson<{ closedIcaos: string[]; reasons: Record<string, string> }>(
-        NOTAM_CACHE_KEY, CACHE_TTL, async () => {
-          const mena = MONITORED_AIRPORTS.filter(a => a.region === 'mena');
-          const result = await fetchNotamClosures(mena);
-          const closedIcaos = [...result.closedIcaoCodes];
-          const reasons: Record<string, string> = {};
-          for (const [icao, reason] of result.notamsByIcao) reasons[icao] = reason;
-          return { closedIcaos, reasons };
-        }
-      );
-    } catch (err) {
-      console.warn(`[Aviation] NOTAM fetch failed: ${err instanceof Error ? err.message : 'unknown'}`);
-    }
-  }
+  const notamResult = await loadNotamClosures();
   if (notamResult && notamResult.closedIcaos?.length > 0) {
     const existingIatas = new Set(allAlerts.map(a => a.iata));
     for (const icao of notamResult.closedIcaos) {
@@ -169,13 +137,13 @@ export async function listAirportDelays(
       if (existingIatas.has(airport.iata)) {
         const idx = allAlerts.findIndex(a => a.iata === airport.iata);
         if (idx >= 0) {
-          allAlerts[idx] = buildNotamAlert(airport, reason);
+          allAlerts[idx] = mergeNotamWithExistingAlert(airport, reason, allAlerts[idx] ?? null);
         }
       } else {
         allAlerts.push(buildNotamAlert(airport, reason));
       }
     }
-    console.log(`[Aviation] NOTAM: ${notamResult.closedIcaos.length} closures applied`);
+    console.warn(`[Aviation] NOTAM: ${notamResult.closedIcaos.length} closures applied`);
   }
 
   // 4. Fill in ALL monitored airports with no alerts as "normal operations"
@@ -206,8 +174,6 @@ export async function listAirportDelays(
       });
     }
   }
-
-  console.log(`[Aviation] Total: ${allAlerts.length} alerts (${normalCount} normal) in ${Date.now() - t0}ms`);
 
   // Write bootstrap key for initial page load hydration
   try {
