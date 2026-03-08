@@ -1,9 +1,12 @@
 import { Panel } from './Panel';
 import type { PredictionMarket } from '@/services/prediction';
 import { escapeHtml, sanitizeUrl } from '@/utils/sanitize';
-import { t } from '@/services/i18n';
+import { t, getCurrentLanguage } from '@/services/i18n';
+import { translateText } from '@/services/summarization';
 
 export class PredictionPanel extends Panel {
+  private translationCache = new Map<string, string>();
+
   constructor() {
     super({
       id: 'polymarket',
@@ -67,5 +70,50 @@ export class PredictionPanel extends Panel {
       .join('');
 
     this.setContent(html);
+
+    const lang = getCurrentLanguage();
+    if (lang !== 'en') {
+      this.translateTitles(data, lang);
+    }
+  }
+
+  private async translateTitles(data: PredictionMarket[], lang: string): Promise<void> {
+    const untranslated = data.filter((p) => !this.translationCache.has(p.title));
+
+    if (untranslated.length > 0) {
+      const BATCH_SIZE = 5;
+      for (let i = 0; i < untranslated.length; i += BATCH_SIZE) {
+        const batch = untranslated.slice(i, i + BATCH_SIZE);
+        const titles = batch.map((p) => p.title).join('\n');
+        try {
+          const result = await translateText(titles, lang);
+          if (result) {
+            const lines = result.split('\n');
+            for (let j = 0; j < batch.length && j < lines.length; j++) {
+              const translated = lines[j]?.trim();
+              const item = batch[j];
+              if (translated && item) {
+                this.translationCache.set(item.title, translated);
+              }
+            }
+          }
+        } catch {
+          continue;
+        }
+      }
+    }
+
+    const container = this.content;
+
+    const questionEls = container.querySelectorAll('.prediction-question');
+    for (let i = 0; i < data.length && i < questionEls.length; i++) {
+      const item = data[i];
+      const el = questionEls[i];
+      if (!item || !el) continue;
+      const translated = this.translationCache.get(item.title);
+      if (translated) {
+        el.textContent = translated;
+      }
+    }
   }
 }

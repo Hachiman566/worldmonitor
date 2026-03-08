@@ -796,7 +796,7 @@ export default defineConfig({
   server: {
     port: 3000,
     open: !isE2E,
-    hmr: isE2E ? false : undefined,
+    hmr: isE2E ? false : { overlay: false },
     watch: {
       ignored: [
         '**/test-results/**',
