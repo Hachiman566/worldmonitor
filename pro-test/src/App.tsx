@@ -17,7 +17,6 @@ import { SubscriptionCheckout } from './components/SubscriptionCheckout';
 
 const API_BASE = location.hostname === 'localhost' ? 'https://api.worldmonitor.app' : '/api';
 const TURNSTILE_SITE_KEY = '0x4AAAAAACnaYgHIyxclu8Tj';
-const PRO_URL = 'https://worldmonitor.app/pro';
 
 declare global {
   interface Window {
@@ -47,106 +46,6 @@ export function renderTurnstileWidgets(): number {
   return count;
 }
 
-function getRefCode(): string | undefined {
-  const params = new URLSearchParams(window.location.search);
-  return params.get('ref') || undefined;
-}
-
-function sanitize(val: unknown): string {
-  return String(val ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] || c));
-}
-
-function showReferralSuccess(formEl: HTMLFormElement, data: { referralCode?: string; position?: number; status?: string }) {
-  if (data.referralCode == null && data.status == null) {
-    const btn = formEl.querySelector('button[type="submit"]') as HTMLButtonElement;
-    if (btn) { btn.textContent = t('form.joinWaitlist'); btn.disabled = false; }
-    return;
-  }
-  const safeCode = sanitize(data.referralCode);
-  const referralLink = `${PRO_URL}?ref=${safeCode}`;
-  const shareText = encodeURIComponent(t('referral.shareText'));
-  const shareUrl = encodeURIComponent(referralLink);
-
-  const el = (tag: string, cls: string, text?: string) => {
-    const node = document.createElement(tag);
-    node.className = cls;
-    if (text) node.textContent = text;
-    return node;
-  };
-
-  const successDiv = el('div', 'text-center');
-
-  const isAlreadyRegistered = data.status === 'already_registered';
-  const shareHint = t('referral.shareHint');
-
-  if (isAlreadyRegistered) {
-    successDiv.appendChild(el('p', 'text-lg font-display font-bold text-wm-green mb-2', t('referral.alreadyOnList')));
-  } else {
-    successDiv.appendChild(el('p', 'text-lg font-display font-bold text-wm-green mb-2', t('referral.youreIn')));
-  }
-  successDiv.appendChild(el('p', 'text-sm text-wm-muted mb-4', shareHint));
-
-  if (safeCode) {
-    const linkBox = el('div', 'bg-wm-card border border-wm-border px-4 py-3 mb-4 font-mono text-xs text-wm-green break-all select-all cursor-pointer', referralLink);
-    linkBox.addEventListener('click', () => {
-      navigator.clipboard.writeText(referralLink).then(() => {
-        linkBox.textContent = t('referral.copied');
-        setTimeout(() => { linkBox.textContent = referralLink; }, 2000);
-      });
-    });
-    successDiv.appendChild(linkBox);
-
-    const shareRow = el('div', 'flex gap-3 justify-center flex-wrap');
-    const shareLinks = [
-      { label: t('referral.shareOnX'), href: `https://x.com/intent/tweet?text=${shareText}&url=${shareUrl}` },
-      { label: t('referral.linkedin'), href: `https://www.linkedin.com/sharing/share-offsite/?url=${shareUrl}` },
-      { label: t('referral.whatsapp'), href: `https://wa.me/?text=${shareText}%20${shareUrl}` },
-      { label: t('referral.telegram'), href: `https://t.me/share/url?url=${shareUrl}&text=${encodeURIComponent(t('referral.joinWaitlistShare'))}` },
-    ];
-    for (const s of shareLinks) {
-      const a = el('a', 'bg-wm-card border border-wm-border px-4 py-2 text-xs font-mono text-wm-muted hover:text-wm-text hover:border-wm-text transition-colors', s.label);
-      (a as HTMLAnchorElement).href = s.href;
-      (a as HTMLAnchorElement).target = '_blank';
-      (a as HTMLAnchorElement).rel = 'noreferrer';
-      shareRow.appendChild(a);
-    }
-    successDiv.appendChild(shareRow);
-  }
-
-  formEl.replaceWith(successDiv);
-}
-
-async function submitWaitlist(email: string, formEl: HTMLFormElement) {
-  const btn = formEl.querySelector('button[type="submit"]') as HTMLButtonElement;
-  const origText = btn.textContent;
-  btn.disabled = true;
-  btn.textContent = t('form.submitting');
-
-  const honeypot = (formEl.querySelector('input[name="website"]') as HTMLInputElement)?.value || '';
-  const turnstileWidget = formEl.querySelector('.cf-turnstile') as HTMLElement | null;
-  const turnstileToken = turnstileWidget?.dataset.token || '';
-  const ref = getRefCode();
-
-  try {
-    const res = await fetch(`${API_BASE}/register-interest`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, source: 'pro-waitlist', website: honeypot, turnstileToken, referredBy: ref }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Registration failed');
-    showReferralSuccess(formEl, { referralCode: data.referralCode, position: data.position, status: data.status });
-  } catch (err: any) {
-    btn.textContent = err.message === 'Too many requests' ? t('form.tooManyRequests') : t('form.failedTryAgain');
-    btn.disabled = false;
-    if (turnstileWidget?.dataset.widgetId && window.turnstile) {
-      window.turnstile.reset(turnstileWidget.dataset.widgetId);
-      delete turnstileWidget.dataset.token;
-    }
-    setTimeout(() => { btn.textContent = origText; }, 3000);
-  }
-}
-
 const SlackIcon = () => (
   <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor" aria-hidden="true">
     <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312zM15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z"/>
@@ -154,7 +53,7 @@ const SlackIcon = () => (
 );
 
 const Logo = () => (
-  <a href="https://worldmonitor.app" className="flex items-center gap-2 hover:opacity-80 transition-opacity" aria-label="World Monitor — Home">
+  <a href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity" aria-label="World Monitor — Home">
     <div className="relative w-8 h-8 rounded-full bg-wm-card border border-wm-border flex items-center justify-center overflow-hidden">
       <Globe className="w-5 h-5 text-wm-blue opacity-50 absolute" aria-hidden="true" />
       <Activity className="w-6 h-6 text-wm-green absolute z-10" aria-hidden="true" />
@@ -184,7 +83,7 @@ const Navbar = () => (
   </nav>
 );
 
-/* ─── 1. Hero (draft headline + current waitlist form) ─── */
+/* ─── 1. Hero (subscription entry) ─── */
 const WiredBadge = () => (
   <a
     href="https://www.wired.me/story/the-music-streaming-ceo-who-built-a-global-war-map"
@@ -219,33 +118,13 @@ const Hero = () => (
           {t('hero.missionLine')}
         </p>
 
-        {getRefCode() && (
-          <div className="inline-flex items-center gap-2 px-4 py-2 mb-4 rounded-sm border border-wm-green/30 bg-wm-green/5 text-sm font-mono text-wm-green">
-            <Users className="w-4 h-4" aria-hidden="true" />
-            {t('referral.invitedBanner')}
-          </div>
-        )}
-        <form className="flex flex-col gap-3 max-w-md mx-auto" onSubmit={(e) => { e.preventDefault(); const form = e.currentTarget; const email = new FormData(form).get('email') as string; submitWaitlist(email, form); }}>
-          <input type="text" name="website" autoComplete="off" tabIndex={-1} aria-hidden="true" className="absolute opacity-0 h-0 w-0 pointer-events-none" />
-          <div className="flex flex-col sm:flex-row gap-3">
-            <input
-              type="email"
-              name="email"
-              placeholder={t('hero.emailPlaceholder')}
-              className="flex-1 bg-wm-card border border-wm-border rounded-sm px-4 py-3 text-sm focus:outline-none focus:border-wm-green transition-colors font-mono"
-              required
-              aria-label={t('hero.emailAriaLabel')}
-            />
-            <button type="submit" className="bg-wm-green text-wm-bg px-6 py-3 rounded-sm font-mono text-sm uppercase tracking-wider font-bold hover:bg-green-400 transition-colors flex items-center justify-center gap-2 whitespace-nowrap">
-              {t('hero.reserveEarlyAccess')} <ArrowRight className="w-4 h-4" aria-hidden="true" />
-            </button>
-          </div>
-          <div className="cf-turnstile mx-auto" />
-        </form>
+        <a href="#subscribe" className="inline-flex items-center justify-center gap-2 bg-wm-green text-wm-bg px-6 py-3 rounded-sm font-mono text-sm uppercase tracking-wider font-bold hover:bg-green-400 transition-colors">
+          {t('subscription.subscribe')} <ArrowRight className="w-4 h-4" aria-hidden="true" />
+        </a>
         <div className="flex items-center justify-center gap-4 mt-4">
           <p className="text-xs text-wm-muted font-mono">{t('hero.launchingDate')}</p>
           <span className="text-wm-border">|</span>
-          <a href="https://worldmonitor.app" className="text-xs text-wm-green font-mono hover:text-green-300 transition-colors flex items-center gap-1">
+          <a href="/" className="text-xs text-wm-green font-mono hover:text-green-300 transition-colors flex items-center gap-1">
             {t('hero.tryFreeDashboard')} <ArrowRight className="w-3 h-3" aria-hidden="true" />
           </a>
         </div>
@@ -368,7 +247,7 @@ const LivePreview = () => (
           </div>
           <span className="font-mono text-xs text-wm-muted ml-2">{t('livePreview.windowTitle')}</span>
           <a
-            href="https://worldmonitor.app"
+            href="/"
             target="_blank"
             rel="noreferrer"
             className="ml-auto text-xs text-wm-green font-mono hover:text-green-300 transition-colors flex items-center gap-1"
@@ -383,7 +262,7 @@ const LivePreview = () => (
             className="absolute inset-0 w-full h-full object-cover"
           />
           <iframe
-            src="https://worldmonitor.app?alert=false"
+            src="/?alert=false"
             title={t('livePreview.iframeTitle')}
             className="relative w-full h-full border-0"
             loading="lazy"
@@ -392,7 +271,7 @@ const LivePreview = () => (
           <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-wm-bg/80 via-transparent to-transparent" />
           <div className="absolute bottom-4 left-0 right-0 text-center pointer-events-auto">
             <a
-              href="https://worldmonitor.app"
+              href="/"
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-2 bg-wm-green text-wm-bg px-6 py-3 rounded-sm font-mono text-sm uppercase tracking-wider font-bold hover:bg-green-400 transition-colors"
@@ -830,23 +709,9 @@ const Footer = () => (
       <h2 className="text-4xl font-display font-bold mb-4">{t('finalCta.title')}</h2>
       <p className="text-wm-muted mb-8">{t('finalCta.subtitle')}</p>
 
-      <form className="flex flex-col gap-3 max-w-md mx-auto mb-6" onSubmit={(e) => { e.preventDefault(); const form = e.currentTarget; const email = new FormData(form).get('email') as string; submitWaitlist(email, form); }}>
-        <input type="text" name="website" autoComplete="off" tabIndex={-1} aria-hidden="true" className="absolute opacity-0 h-0 w-0 pointer-events-none" />
-        <div className="flex flex-col sm:flex-row gap-3">
-          <input
-            type="email"
-            name="email"
-            placeholder={t('hero.emailPlaceholder')}
-            className="flex-1 bg-wm-card border border-wm-border rounded-sm px-4 py-3 text-sm focus:outline-none focus:border-wm-green transition-colors font-mono"
-            required
-            aria-label={t('hero.emailAriaLabel')}
-          />
-          <button type="submit" className="bg-wm-green text-wm-bg px-6 py-3 rounded-sm font-mono text-sm uppercase tracking-wider font-bold hover:bg-green-400 transition-colors whitespace-nowrap">
-            {t('finalCta.getPro')}
-          </button>
-        </div>
-        <div className="cf-turnstile mx-auto" />
-      </form>
+      <a href="#subscribe" className="inline-flex items-center justify-center gap-2 bg-wm-green text-wm-bg px-6 py-3 rounded-sm font-mono text-sm uppercase tracking-wider font-bold hover:bg-green-400 transition-colors mb-6">
+        {t('subscription.subscribe')} <ArrowRight className="w-4 h-4" aria-hidden="true" />
+      </a>
 
       <a
         href="#enterprise"

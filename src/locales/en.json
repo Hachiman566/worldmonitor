@@ -125,6 +125,7 @@
     }
   },
   "header": {
+    "subscribePro": "Subscribe Pro",
     "world": "WORLD",
     "tech": "TECH",
     "live": "LIVE",

@@ -77,3 +77,9 @@ Run `npm run build:pro` before deployment to regenerate the static Pro assets co
 - Key handoff: after explicit user approval of the current broad scope, the draft was verified as 125 permissions (own account 77 read / 48 write; Connect 74 read / 43 write; 8 high-risk permissions), named `worldmonitor-production-billing`, and Create was clicked. The post-create page was deliberately not inspected because it may display the secret. The user subsequently confirmed creation and direct secure entry, and the dashboard confirmed `STRIPE_API_KEY` exists as Production Secret. Do not create a duplicate. The key is not a least-privilege key.
 
 - Protected-deployment verification incident: CLI curl unexpectedly created an automation bypass secret despite an initial local guard; the request then failed during option parsing. The secret was not printed or used. Further token creation is now blocked in the temporary CLI, and the user must remove this unintended automation bypass in Deployment Protection. Protection itself was not disabled. Final deployment verification remains pending.
+
+## Subscription navigation
+
+The web dashboard header and mobile menu link to the same-origin `/pro#subscribe`. The Pro landing hero and footer use subscription links instead of collecting waitlist email addresses; Stripe billing email and the separate enterprise contact form remain unchanged. The dashboard preview embeds `/?alert=false`, avoiding upstream framing restrictions. Its full-screen links also stay on this site.
+
+Navigation regressions cover desktop and mobile clicks into the real generated Pro page, and verify that the preview contains the dashboard header without another Pro preview iframe. The local harness applies the existing Vercel `/pro` rewrite. The Pro tests cover removal of waitlist collection and subscription scrolling; registration and billing requests are mocked, so these tests do not create registrations or payments.

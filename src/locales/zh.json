@@ -125,6 +125,7 @@
     }
   },
   "header": {
+    "subscribePro": "订阅 Pro",
     "world": "世界",
     "tech": "科技",
     "live": "实时",

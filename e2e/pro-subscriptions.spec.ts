@@ -1,6 +1,24 @@
 import { test, expect } from '@playwright/test';
 
 const config = { available: true, portalUrl: 'https://billing.stripe.com/p/login/test_fixture' };
+test('landing CTAs replace waitlist collection and preview loads the local dashboard', async ({ page }) => {
+  const registrations: string[] = [];
+  await page.route('**/api/register-interest', route => { registrations.push(route.request().url()); return route.abort(); });
+  await page.route('**/?alert=false', route => route.fulfill({ contentType: 'text/html', body: '<title>Local dashboard</title><main>Dashboard preview</main>' }));
+  await page.goto('/pro/');
+  const hero = page.locator('main > section').first();
+  await expect(hero.locator('input[type="email"]')).toHaveCount(0);
+  const cta = hero.locator('a[href="#subscribe"]');
+  await expect(cta).toBeVisible();
+  await cta.click();
+  await expect(page.getByRole('heading', { name: 'Choose your subscription' })).toBeVisible();
+  await expect(page.locator('footer input[type="email"]')).toHaveCount(0);
+  await expect(page.locator('footer a[href="#subscribe"]')).toHaveCount(1);
+  await expect(page.locator('iframe')).toHaveAttribute('src', '/?alert=false');
+  await page.locator('iframe').scrollIntoViewIfNeeded();
+  await expect(page.frameLocator('iframe').getByText('Dashboard preview')).toBeVisible();
+  expect(registrations).toHaveLength(0);
+});
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('i18nextLng', 'en'));
   await page.route('**/api/billing/config', route => route.fulfill({ json: config }));
