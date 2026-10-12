@@ -5,10 +5,17 @@ export const PLANS = Object.freeze({ monthly: { amount: 1000, interval: 'month' 
 export function json(body, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' } });
 }
+export function billingRedisConfig(env) {
+  for (const [urlKey, tokenKey] of [['UPSTASH_REDIS_REST_URL', 'UPSTASH_REDIS_REST_TOKEN'], ['KV_REST_API_URL', 'KV_REST_API_TOKEN']]) {
+    if (env[urlKey] && env[tokenKey]) return { url: env[urlKey], token: env[tokenKey] };
+  }
+  return null;
+}
 export function settings(env) {
   const origin = new URL(env.BILLING_APP_ORIGIN);
   if (origin.origin !== env.BILLING_APP_ORIGIN || (origin.protocol !== 'https:' && !(origin.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(origin.hostname)))) throw new Error('Invalid billing origin');
-  for (const key of ['STRIPE_API_KEY', 'STRIPE_WEBHOOK_SECRET', 'STRIPE_PRICE_MONTHLY', 'STRIPE_PRICE_YEARLY', 'UPSTASH_REDIS_REST_URL', 'UPSTASH_REDIS_REST_TOKEN']) if (!env[key]) throw new Error('Billing configuration missing');
+  for (const key of ['STRIPE_API_KEY', 'STRIPE_WEBHOOK_SECRET', 'STRIPE_PRICE_MONTHLY', 'STRIPE_PRICE_YEARLY']) if (!env[key]) throw new Error('Billing configuration missing');
+  if (!billingRedisConfig(env)) throw new Error('Billing configuration missing');
   return { origin: origin.origin, prices: { monthly: env.STRIPE_PRICE_MONTHLY, yearly: env.STRIPE_PRICE_YEARLY } };
 }
 export function portalUrl(value) {

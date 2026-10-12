@@ -18,3 +18,11 @@ target/
 
 # Common local artifacts
 .DS_Store
+
+# Deployment credentials must come from the server environment, never source uploads.
+.env*
+**/.env*
+.vercel/
+
+# Tests colocated with handlers are not deployable API functions.
+api/**/*.test.mjs

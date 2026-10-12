@@ -11,7 +11,6 @@ import {
   MARKET_SYMBOLS,
   SITE_VARIANT,
   LAYER_TO_SOURCE,
-  DEFAULT_PANELS,
 } from '@/config';
 import { INTEL_HOTSPOTS, CONFLICT_ZONES } from '@/config/geo';
 import { tokenizeForMatch, matchKeyword } from '@/utils/keyword-match';

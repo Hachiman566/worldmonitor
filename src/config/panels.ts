@@ -102,6 +102,9 @@ const FULL_MAP_LAYERS: MapLayers = {
   financialCenters: false,
   centralBanks: false,
   commodityHubs: false,
+  miningSites: false,
+  processingPlants: false,
+  commodityPorts: false,
   gulfInvestments: false,
   // Happy variant layers
   positiveEvents: false,
@@ -155,6 +158,9 @@ const FULL_MOBILE_MAP_LAYERS: MapLayers = {
   financialCenters: false,
   centralBanks: false,
   commodityHubs: false,
+  miningSites: false,
+  processingPlants: false,
+  commodityPorts: false,
   gulfInvestments: false,
   // Happy variant layers
   positiveEvents: false,
@@ -248,6 +254,9 @@ const TECH_MAP_LAYERS: MapLayers = {
   financialCenters: false,
   centralBanks: false,
   commodityHubs: false,
+  miningSites: false,
+  processingPlants: false,
+  commodityPorts: false,
   gulfInvestments: false,
   // Happy variant layers
   positiveEvents: false,
@@ -301,6 +310,9 @@ const TECH_MOBILE_MAP_LAYERS: MapLayers = {
   financialCenters: false,
   centralBanks: false,
   commodityHubs: false,
+  miningSites: false,
+  processingPlants: false,
+  commodityPorts: false,
   gulfInvestments: false,
   // Happy variant layers
   positiveEvents: false,
@@ -394,6 +406,9 @@ const FINANCE_MAP_LAYERS: MapLayers = {
   financialCenters: true,
   centralBanks: true,
   commodityHubs: false,
+  miningSites: false,
+  processingPlants: false,
+  commodityPorts: false,
   gulfInvestments: false,
   // Happy variant layers
   positiveEvents: false,
@@ -447,6 +462,9 @@ const FINANCE_MOBILE_MAP_LAYERS: MapLayers = {
   financialCenters: false,
   centralBanks: true,
   commodityHubs: false,
+  miningSites: false,
+  processingPlants: false,
+  commodityPorts: false,
   gulfInvestments: false,
   // Happy variant layers
   positiveEvents: false,
@@ -515,6 +533,9 @@ const HAPPY_MAP_LAYERS: MapLayers = {
   financialCenters: false,
   centralBanks: false,
   commodityHubs: false,
+  miningSites: false,
+  processingPlants: false,
+  commodityPorts: false,
   gulfInvestments: false,
   // Happy variant layers
   positiveEvents: true,
@@ -568,6 +589,9 @@ const HAPPY_MOBILE_MAP_LAYERS: MapLayers = {
   financialCenters: false,
   centralBanks: false,
   commodityHubs: false,
+  miningSites: false,
+  processingPlants: false,
+  commodityPorts: false,
   gulfInvestments: false,
   // Happy variant layers
   positiveEvents: true,

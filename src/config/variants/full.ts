@@ -90,6 +90,9 @@ export const DEFAULT_MAP_LAYERS: MapLayers = {
   financialCenters: false,
   centralBanks: false,
   commodityHubs: false,
+  miningSites: false,
+  processingPlants: false,
+  commodityPorts: false,
   gulfInvestments: false,
   // Happy variant layers
   positiveEvents: false,
@@ -143,6 +146,9 @@ export const MOBILE_DEFAULT_MAP_LAYERS: MapLayers = {
   financialCenters: false,
   centralBanks: false,
   commodityHubs: false,
+  miningSites: false,
+  processingPlants: false,
+  commodityPorts: false,
   gulfInvestments: false,
   // Happy variant layers
   positiveEvents: false,
