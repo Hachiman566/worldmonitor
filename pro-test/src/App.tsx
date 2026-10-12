@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { t } from './i18n';
 import dashboardFallback from './assets/worldmonitor-7-mar-2026.jpg';
+import { SubscriptionCheckout } from './components/SubscriptionCheckout';
 
 const API_BASE = location.hostname === 'localhost' ? 'https://api.worldmonitor.app' : '/api';
 const TURNSTILE_SITE_KEY = '0x4AAAAAACnaYgHIyxclu8Tj';
@@ -176,8 +177,8 @@ const Navbar = () => (
         <a href="#api" className="hover:text-wm-text transition-colors">{t('nav.api')}</a>
         <a href="#enterprise" className="hover:text-wm-text transition-colors">{t('nav.enterprise')}</a>
       </div>
-      <a href="#waitlist" className="bg-wm-green text-wm-bg px-4 py-2 rounded-sm font-mono text-xs uppercase tracking-wider font-bold hover:bg-green-400 transition-colors">
-        {t('nav.reserveAccess')}
+      <a href="#subscribe" className="bg-wm-green text-wm-bg px-4 py-2 rounded-sm font-mono text-xs uppercase tracking-wider font-bold hover:bg-green-400 transition-colors">
+        {t('subscription.subscribe')}
       </a>
     </div>
   </nav>
@@ -300,8 +301,8 @@ const TwoPathSplit = () => (
             </li>
           ))}
         </ul>
-        <a href="#waitlist" className="block text-center py-2.5 rounded-sm font-mono text-xs uppercase tracking-wider font-bold bg-wm-green text-wm-bg hover:bg-green-400 transition-colors">
-          {t('twoPath.proCta')}
+        <a href="#subscribe" className="block text-center py-2.5 rounded-sm font-mono text-xs uppercase tracking-wider font-bold bg-wm-green text-wm-bg hover:bg-green-400 transition-colors">
+          {t('subscription.subscribe')}
         </a>
       </div>
 
@@ -1073,6 +1074,7 @@ export default function App() {
         <ApiSection />
         <EnterpriseShowcase />
         <PricingTable />
+        <SubscriptionCheckout />
         <FAQ />
       </main>
       <Footer />
